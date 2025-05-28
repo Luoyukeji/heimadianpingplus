@@ -10,6 +10,9 @@ import com.hmdp.utils.SystemConstants;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 
 /**
  * <p>
@@ -31,7 +34,7 @@ public class ShopController {
      * @return 商铺详情数据
      */
     @GetMapping("/{id}")
-    public Result queryShopById(@PathVariable("id") Long id) {
+    public Result queryShopById(@PathVariable("id") @NotNull(message = "商铺id不能为空") Long id) {
         return shopService.queryById(id);
     }
 
@@ -41,7 +44,7 @@ public class ShopController {
      * @return 商铺id
      */
     @PostMapping
-    public Result saveShop(@RequestBody Shop shop) {
+    public Result saveShop(@RequestBody @Valid Shop shop) {
         // 写入数据库
         shopService.save(shop);
         // 返回店铺id
@@ -54,7 +57,7 @@ public class ShopController {
      * @return 无
      */
     @PutMapping
-    public Result updateShop(@RequestBody Shop shop) {
+    public Result updateShop(@RequestBody @Valid Shop shop) {
         // 写入数据库
         return shopService.update2(shop);
     }
@@ -67,12 +70,12 @@ public class ShopController {
      */
     @GetMapping("/of/type")
     public Result queryShopByType(
-            @RequestParam("typeId") Integer typeId,
-            @RequestParam(value = "current", defaultValue = "1") Integer current,
+            @RequestParam(value = "typeId", required = true) @NotNull(message = "typeId不能为空") Integer typeId,
+            @RequestParam(value = "current", defaultValue = "1") @Min(value = 1, message = "页码必须大于0") Integer current,
             @RequestParam(value = "x", required = false) Double x,
             @RequestParam(value = "y", required = false) Double y
     ) {
-       return shopService.queryShopByType(typeId, current, x, y);
+        return shopService.queryShopByType(typeId, current, x, y);
     }
 
     /**
@@ -84,7 +87,7 @@ public class ShopController {
     @GetMapping("/of/name")
     public Result queryShopByName(
             @RequestParam(value = "name", required = false) String name,
-            @RequestParam(value = "current", defaultValue = "1") Integer current
+            @RequestParam(value = "current", defaultValue = "1") @Min(value = 1, message = "页码必须大于0") Integer current
     ) {
         // 根据类型分页查询
         Page<Shop> page = shopService.query()

@@ -11,10 +11,17 @@ import com.hmdp.service.IUserInfoService;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import com.hmdp.utils.RedisConstants;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * <p>
@@ -34,11 +41,14 @@ public class UserController {
     @Resource
     private IUserInfoService userInfoService;
 
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
     /**
      * 发送手机验证码
      */
     @PostMapping("code")
-    public Result sendCode(@RequestParam("phone") String phone, HttpSession session) {
+    public Result sendCode(@RequestParam("phone") @NotBlank(message = "手机号不能为空") String phone, HttpSession session) {
         // 发送短信验证码并保存验证码
         return userService.sendCode2(phone, session);
     }
@@ -49,6 +59,13 @@ public class UserController {
      */
     @PostMapping("/login")
     public Result login(@RequestBody LoginFormDTO loginForm, HttpSession session){
+        if (loginForm == null || loginForm.getPhone() == null || loginForm.getPhone().trim().isEmpty()) {
+            return Result.fail("手机号不能为空");
+        }
+        if ((loginForm.getCode() == null || loginForm.getCode().trim().isEmpty()) &&
+            (loginForm.getPassword() == null || loginForm.getPassword().trim().isEmpty())) {
+            return Result.fail("验证码和密码不能同时为空");
+        }
         // 实现登录功能
         return userService.login2(loginForm, session);
     }
@@ -58,9 +75,15 @@ public class UserController {
      * @return 无
      */
     @PostMapping("/logout")
-    public Result logout(){
-        // TODO 实现登出功能
-        return Result.fail("功能未完成");
+    public Result logout(HttpServletRequest request){
+        // 新增代码：完善登出功能
+        String token = request.getHeader("authorization");
+        if (token != null && !token.isEmpty()) {
+            String key = RedisConstants.LOGIN_USER_KEY + token;
+            stringRedisTemplate.delete(key);
+        }
+        UserHolder.removeUser(); // 清理ThreadLocal
+        return Result.ok("退出登录成功");
     }
 
     @GetMapping("/me")
@@ -71,7 +94,7 @@ public class UserController {
     }
 
     @GetMapping("/info/{id}")
-    public Result info(@PathVariable("id") Long userId){
+    public Result info(@PathVariable("id") @NotNull(message = "用户id不能为空") Long userId){
         // 查询详情
         UserInfo info = userInfoService.getById(userId);
         if (info == null) {
@@ -85,7 +108,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public Result queryUserById(@PathVariable("id") Long userId){
+    public Result queryUserById(@PathVariable("id") @NotNull(message = "用户id不能为空") Long userId){
         // 查询详情
         User user = userService.getById(userId);
         if (user == null) {

@@ -87,30 +87,29 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Override
     public Result login(LoginFormDTO loginForm, HttpSession session) {
-        // 1.校验手机号
         String phone = loginForm.getPhone();
+        // 1.校验手机号
         if (RegexUtils.isPhoneInvalid(phone)) {
-            // 2.如果不符合，返回错误信息
-            return Result.fail("手机号格式错误！");
+            return Result.fail("手机号校验失败，请重新校验手机号是否正确！");
         }
-        // 3.从redis获取验证码并校验
+        // 2.校验验证码
         String cacheCode = stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);
         String code = loginForm.getCode();
         if (cacheCode == null || !cacheCode.equals(code)) {
-            // 不一致，报错
-            return Result.fail("验证码错误");
+            return Result.fail("验证码校验失败");
         }
-
-        // 4.一致，根据手机号查询用户 select * from tb_user where phone = ?
+        // 3.根据手机号查询用户
         User user = query().eq("phone", phone).one();
-
-        // 5.判断用户是否存在
+        // 4.用户不存在，创建用户
         if (user == null) {
-            // 6.不存在，创建新用户并保存
-            user = createUserWithPhone(phone);
-
+            try {
+                user = createUserWithPhone(phone);
+            } catch (RuntimeException e) {
+                log.debug("创建用户失败", e);
+                return Result.fail("创建用户失败！请稍后再试");
+            }
         }
-        // 8.返回token
+        // 生成用户token
         return Result.ok(generateToken(user));
     }
 
@@ -138,7 +137,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         String phone = loginForm.getPhone();
         // 1.校验手机号
         if (RegexUtils.isPhoneInvalid(phone)) {
-            return Result.fail("手机号校验失败！");
+            return Result.fail("手机号校验失败，请重新校验手机号是否正确！");
         }
         // 2.校验验证码
         String redisCacheCode = stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);

@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -36,16 +38,19 @@ public class Shop implements Serializable {
     /**
      * 商铺名称
      */
+    @NotBlank(message = "商铺名称不能为空")
     private String name;
 
     /**
      * 商铺类型的id
      */
+    @NotNull(message = "商铺类型不能为空")
     private Long typeId;
 
     /**
      * 商铺图片，多个图片以','隔开
      */
+    @NotBlank(message = "商铺图片不能为空")
     private String images;
 
     /**
@@ -56,6 +61,7 @@ public class Shop implements Serializable {
     /**
      * 地址
      */
+    @NotBlank(message = "地址不能为空")
     private String address;
 
     /**

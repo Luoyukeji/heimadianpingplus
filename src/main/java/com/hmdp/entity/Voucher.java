@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -36,21 +38,25 @@ public class Voucher implements Serializable {
     /**
      * 商铺id
      */
+    @NotNull(message = "店铺id不能为空")
     private Long shopId;
 
     /**
      * 代金券标题
      */
+    @NotBlank(message = "标题不能为空")
     private String title;
 
     /**
      * 副标题
      */
+    @NotBlank(message = "副标题不能为空")
     private String subTitle;
 
     /**
      * 使用规则
      */
+    @NotBlank(message = "规则不能为空")
     private String rules;
 
     /**

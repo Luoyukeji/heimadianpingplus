@@ -33,28 +33,31 @@ public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> i
 
     @Override
     public Result queryTypeList() {
-        String cacheListKey = RedisConstants.CACHE_SHOP_TYPE_LIST;
-        // 查看redis中是否有数据
-        Long size = stringRedisTemplate.opsForList().size(cacheListKey);
-        List<ShopType> shopTypes = new ArrayList<>();
-        // 存在直接返回
-        if (size != null && size > 0) {
-            List<String> cacheQueryTypeList = stringRedisTemplate.opsForList().range(cacheListKey, 0, size - 1);
-            if (cacheQueryTypeList != null) {
-                shopTypes = cacheQueryTypeList.stream().map(x -> JSONUtil.toBean(x, ShopType.class)).collect(Collectors.toList());
-            }
-            return Result.ok(shopTypes);
-        }
-        // 不存在进行数据库查询
-        shopTypes = query().orderByAsc("sort").list();
-        // 数据库查询完，不存在返回空数据
-        if (CollectionUtil.isEmpty(shopTypes)) {
-            return Result.ok(shopTypes);
-        }
-        List<String> redisShopTypeList = shopTypes.stream().map(JSONUtil::toJsonStr).collect(Collectors.toList());
-        // 有数据将数据缓存至redis中
-        stringRedisTemplate.opsForList().rightPushAll(cacheListKey, redisShopTypeList);
-        stringRedisTemplate.expire(cacheListKey, 2, TimeUnit.HOURS);
+        // String cacheListKey = RedisConstants.CACHE_SHOP_TYPE_LIST;
+        // // 查看redis中是否有数据
+        // Long size = stringRedisTemplate.opsForList().size(cacheListKey);
+        // List<ShopType> shopTypes = new ArrayList<>();
+        // // 存在直接返回
+        // if (size != null && size > 0) {
+        //     List<String> cacheQueryTypeList = stringRedisTemplate.opsForList().range(cacheListKey, 0, size - 1);
+        //     if (cacheQueryTypeList != null) {
+        //         shopTypes = cacheQueryTypeList.stream().map(x -> JSONUtil.toBean(x, ShopType.class)).collect(Collectors.toList());
+        //     }
+        //     return Result.ok(shopTypes);
+        // }
+        // // 不存在进行数据库查询
+        // shopTypes = query().orderByAsc("sort").list();
+        // // 数据库查询完，不存在返回空数据
+        // if (CollectionUtil.isEmpty(shopTypes)) {
+        //     return Result.ok(shopTypes);
+        // }
+        // List<String> redisShopTypeList = shopTypes.stream().map(JSONUtil::toJsonStr).collect(Collectors.toList());
+        // // 有数据将数据缓存至redis中
+        // stringRedisTemplate.opsForList().rightPushAll(cacheListKey, redisShopTypeList);
+        // stringRedisTemplate.expire(cacheListKey, 2, TimeUnit.HOURS);
+        // return Result.ok(shopTypes);
+        // 只查数据库，不查缓存
+        List<ShopType> shopTypes = query().orderByAsc("sort").list();
         return Result.ok(shopTypes);
     }
 }

@@ -1,0 +1,581 @@
+﻿openapi: 3.0.0
+info:
+  title: 黑马点评API文档
+  version: 1.0.0
+  description: |
+    本文档涵盖黑马点评项目全部主要API接口，适用于前后端联调及团队协作。所有接口返回统一的Result结构，部分接口需登录鉴权（Token放在Header: Authorization）。
+
+servers:
+  - url: http://localhost:8081
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Result:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: 是否成功
+        errorMsg:
+          type: string
+          description: 错误信息
+        data:
+          type: object
+          description: 返回数据
+        total:
+          type: integer
+          description: 总数（分页时返回）
+
+    UserDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+        nickName:
+          type: string
+        icon:
+          type: string
+
+    LoginFormDTO:
+      type: object
+      properties:
+        phone:
+          type: string
+        code:
+          type: string
+        password:
+          type: string
+
+    Shop:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        typeId: { type: integer }
+        images: { type: string }
+        area: { type: string }
+        address: { type: string }
+        x: { type: number }
+        y: { type: number }
+        avgPrice: { type: integer }
+        sold: { type: integer }
+        comments: { type: integer }
+        score: { type: integer }
+        openHours: { type: string }
+        distance: { type: number, nullable: true }
+
+    ShopType:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        icon: { type: string }
+        sort: { type: integer }
+
+    Voucher:
+      type: object
+      properties:
+        id: { type: integer }
+        shopId: { type: integer }
+        title: { type: string }
+        subTitle: { type: string }
+        rules: { type: string }
+        payValue: { type: integer }
+        actualValue: { type: integer }
+        type: { type: integer }
+        status: { type: integer }
+        stock: { type: integer }
+        beginTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+
+    Blog:
+      type: object
+      properties:
+        id: { type: integer }
+        shopId: { type: integer }
+        userId: { type: integer }
+        icon: { type: string }
+        name: { type: string }
+        isLike: { type: boolean }
+        title: { type: string }
+        images: { type: string }
+        content: { type: string }
+        liked: { type: integer }
+        comments: { type: integer }
+        createTime: { type: string, format: date-time }
+        updateTime: { type: string, format: date-time }
+
+paths:
+  /user/code:
+    post:
+      summary: 发送手机验证码
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+      responses:
+        '200':
+          description: 发送结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /user/login:
+    post:
+      summary: 用户登录
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginFormDTO' }
+      responses:
+        '200':
+          description: 登录结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /user/logout:
+    post:
+      summary: 用户登出
+      responses:
+        '200':
+          description: 登出结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /user/me:
+    get:
+      summary: 获取当前登录用户信息
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 用户信息
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /user/info/{id}:
+    get:
+      summary: 获取用户详细信息
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 用户详细信息
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /user/{id}:
+    get:
+      summary: 根据ID查询用户
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 用户信息
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /user/sign:
+    post:
+      summary: 用户签到
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 签到结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /user/sign/count:
+    get:
+      summary: 获取用户连续签到天数
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 连续签到天数
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /shop/{id}:
+    get:
+      summary: 根据ID查询商铺
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 商铺详情
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /shop:
+    post:
+      summary: 新增商铺
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Shop' }
+      responses:
+        '200':
+          description: 新增结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+    put:
+      summary: 更新商铺
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Shop' }
+      responses:
+        '200':
+          description: 更新结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /shop/of/type:
+    get:
+      summary: 按类型分页查询商铺
+      parameters:
+        - name: typeId
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: current
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: x
+          in: query
+          schema: { type: number }
+        - name: y
+          in: query
+          schema: { type: number }
+      responses:
+        '200':
+          description: 商铺列表
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /shop/of/name:
+    get:
+      summary: 按名称分页查询商铺
+      parameters:
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: current
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        '200':
+          description: 商铺列表
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /shop-type/list:
+    get:
+      summary: 查询商铺类型列表
+      responses:
+        '200':
+          description: 类型列表
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /voucher/seckill:
+    post:
+      summary: 新增秒杀券
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Voucher' }
+      responses:
+        '200':
+          description: 新增结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /voucher:
+    post:
+      summary: 新增普通券
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Voucher' }
+      responses:
+        '200':
+          description: 新增结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /voucher/list/{shopId}:
+    get:
+      summary: 查询店铺优惠券列表
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 优惠券列表
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /voucher-order/seckill/{id}:
+    post:
+      summary: 秒杀下单
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 下单结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /blog:
+    post:
+      summary: 发布探店笔记
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Blog' }
+      responses:
+        '200':
+          description: 发布结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /blog/like/{id}:
+    put:
+      summary: 点赞探店笔记
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 点赞结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /blog/of/me:
+    get:
+      summary: 查询我的探店笔记
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: current
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        '200':
+          description: 我的笔记
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /blog/hot:
+    get:
+      summary: 查询热门探店笔记
+      parameters:
+        - name: current
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        '200':
+          description: 热门笔记
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /blog/{id}:
+    get:
+      summary: 根据ID查询探店笔记
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 笔记详情
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /blog/likes/{id}:
+    get:
+      summary: 查询探店笔记点赞用户
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 点赞用户
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /blog/of/user:
+    get:
+      summary: 查询指定用户的探店笔记
+      parameters:
+        - name: current
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: id
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 用户笔记
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /blog/of/follow:
+    get:
+      summary: 查询关注的用户的探店笔记
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: lastId
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: 关注流
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /follow/{id}/{isFollow}:
+    put:
+      summary: 关注/取关用户
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: isFollow
+          in: path
+          required: true
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: 操作结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /follow/or/not/{id}:
+    get:
+      summary: 是否已关注用户
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 查询结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /follow/common/{id}:
+    get:
+      summary: 查询共同关注
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 共同关注
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /upload/blog:
+    post:
+      summary: 上传探店图片
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 上传结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+
+  /upload/blog/delete:
+    get:
+      summary: 删除探店图片
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 删除结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }

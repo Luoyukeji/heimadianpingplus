@@ -6,8 +6,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.Result;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.Follow;
+import com.hmdp.entity.UserInfo;
 import com.hmdp.mapper.FollowMapper;
 import com.hmdp.service.IFollowService;
+import com.hmdp.service.IUserInfoService;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -34,6 +36,8 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
     private StringRedisTemplate stringRedisTemplate;
     @Resource
     private IUserService userService;
+    @Resource
+    private IUserInfoService userInfoService;
 
     @Override
     public Result follow(Long followUserId, Boolean isFollow) {
@@ -50,6 +54,9 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
             if (isSuccess) {
                 // 把关注用户的id，放入redis的set集合 sadd userId followerUserId
                 stringRedisTemplate.opsForSet().add(key, followUserId.toString());
+                // 新增代码：更新关注数和粉丝数
+                userInfoService.lambdaUpdate().eq(UserInfo::getUserId, userId).setSql("followee = followee + 1").update();
+                userInfoService.lambdaUpdate().eq(UserInfo::getUserId, followUserId).setSql("fans = fans + 1").update();
             }
         } else {
             // 3.取关，删除 delete from tb_follow where user_id = ? and follow_user_id = ?
@@ -58,6 +65,9 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
             if (isSuccess) {
                 // 把关注用户的id从Redis集合中移除
                 stringRedisTemplate.opsForSet().remove(key, followUserId.toString());
+                // 新增代码：更新关注数和粉丝数
+                userInfoService.lambdaUpdate().eq(UserInfo::getUserId, userId).setSql("followee = followee - 1").update();
+                userInfoService.lambdaUpdate().eq(UserInfo::getUserId, followUserId).setSql("fans = fans - 1").update();
             }
         }
         return Result.ok();
