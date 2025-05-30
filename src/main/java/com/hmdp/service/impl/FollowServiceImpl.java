@@ -2,6 +2,7 @@ package com.hmdp.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.Result;
 import com.hmdp.dto.UserDTO;
@@ -11,6 +12,7 @@ import com.hmdp.mapper.FollowMapper;
 import com.hmdp.service.IFollowService;
 import com.hmdp.service.IUserInfoService;
 import com.hmdp.service.IUserService;
+import com.hmdp.utils.SystemConstants;
 import com.hmdp.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -65,9 +67,15 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
             if (isSuccess) {
                 // 把关注用户的id从Redis集合中移除
                 stringRedisTemplate.opsForSet().remove(key, followUserId.toString());
-                // 新增代码：更新关注数和粉丝数
-                userInfoService.lambdaUpdate().eq(UserInfo::getUserId, userId).setSql("followee = followee - 1").update();
-                userInfoService.lambdaUpdate().eq(UserInfo::getUserId, followUserId).setSql("fans = fans - 1").update();
+                // 新增代码：防止关注数和粉丝数为负数，防止unsigned溢出
+                UserInfo selfInfo = userInfoService.getById(userId);
+                if (selfInfo != null && selfInfo.getFollowee() != null && selfInfo.getFollowee() > 0) {
+                    userInfoService.lambdaUpdate().eq(UserInfo::getUserId, userId).setSql("followee = followee - 1").update();
+                }
+                UserInfo otherInfo = userInfoService.getById(followUserId);
+                if (otherInfo != null && otherInfo.getFans() != null && otherInfo.getFans() > 0) {
+                    userInfoService.lambdaUpdate().eq(UserInfo::getUserId, followUserId).setSql("fans = fans - 1").update();
+                }
             }
         }
         return Result.ok();
@@ -99,6 +107,27 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
         List<Long> ids = intersect.stream().map(Long::valueOf).collect(Collectors.toList());
         // 4.查询用户
         List<UserDTO> users = userService.listByIds(ids)
+                .stream()
+                .map(user -> BeanUtil.copyProperties(user, UserDTO.class))
+                .collect(Collectors.toList());
+        return Result.ok(users);
+    }
+
+    @Override
+    public Result queryFollowees(Integer current) {
+        // 1. 获取当前登录用户id
+        Long userId = UserHolder.getUser().getId();
+        // 2. 分页查询我关注的用户id
+        Page<Follow> page = this.query()
+                .eq("user_id", userId)
+                .page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
+        List<Follow> records = page.getRecords();
+        if (records == null || records.isEmpty()) {
+            return Result.ok(Collections.emptyList());
+        }
+        List<Long> followeeIds = records.stream().map(Follow::getFollowUserId).collect(Collectors.toList());
+        // 3. 查询用户详细信息
+        List<UserDTO> users = userService.listByIds(followeeIds)
                 .stream()
                 .map(user -> BeanUtil.copyProperties(user, UserDTO.class))
                 .collect(Collectors.toList());

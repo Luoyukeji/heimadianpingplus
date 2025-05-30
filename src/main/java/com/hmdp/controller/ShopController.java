@@ -13,6 +13,7 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.Collections;
 
 /**
  * <p>
@@ -89,11 +90,10 @@ public class ShopController {
             @RequestParam(value = "name", required = false) String name,
             @RequestParam(value = "current", defaultValue = "1") @Min(value = 1, message = "页码必须大于0") Integer current
     ) {
-        // 根据类型分页查询
+        // name 为空时也查全部商家
         Page<Shop> page = shopService.query()
                 .like(StrUtil.isNotBlank(name), "name", name)
                 .page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
-        // 返回数据
         return Result.ok(page.getRecords());
     }
 }

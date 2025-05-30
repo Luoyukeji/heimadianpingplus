@@ -13,6 +13,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.Random;
+
+import static com.hmdp.utils.RedisConstants.LOCK_SHOP_KEY;
 
 @Component
 @Slf4j
@@ -52,11 +55,10 @@ public class CacheClient2 {
      * 根据指定的key查询缓存，并反序列化为指定类型，利用缓存空值的方式解决缓存穿透问题
      */
     public <R, ID> R getRedisPenetrate(String keyPrefix, ID id, Class<R> rClass, Function<ID, R> dbForBack, long ttl, TimeUnit timeUnit) {
-
         String key = keyPrefix + id;
         String redisResult = stringRedisTemplate.opsForValue().get(key);
 
-        if (StringUtil.isNotBlank(redisResult)) {
+        if (StrUtil.isNotBlank(redisResult)) {
             return JSONUtil.toBean(redisResult, rClass);
         }
 
@@ -66,7 +68,9 @@ public class CacheClient2 {
 
         R r = dbForBack.apply(id);
         if (r == null) {
-            this.setRedis("", key, ttl, timeUnit);
+            // 修改空值缓存时间为较短的随机时间，防止缓存雪崩
+            long randomTtl = ttl + new Random().nextInt(300);
+            this.setRedis("", key, randomTtl, timeUnit);
             return null;
         }
         this.setRedis(r, key, ttl, timeUnit);
@@ -79,7 +83,7 @@ public class CacheClient2 {
      */
     public <R, ID> R getRedisBreakdown(String keyPrefix, ID id, Class<R> rClass, Function<ID, R> dbForBack, long ttl, TimeUnit timeUnit) {
         String key = keyPrefix + id;
-        String lockKey = keyPrefix + "shop:lock";
+        String lockKey = LOCK_SHOP_KEY + id;
 
         String redisResult = stringRedisTemplate.opsForValue().get(key);
         // 缓存数据为空
@@ -98,10 +102,18 @@ public class CacheClient2 {
         if (tryLock) {
             CACHE_EXECUTOR.submit(() -> {
                 try {
+                    // 双重检查，防止重复重建
+                    String checkResult = stringRedisTemplate.opsForValue().get(key);
+                    if (StrUtil.isNotBlank(checkResult)) {
+                        RedisData checkData = JSONUtil.toBean(checkResult, RedisData.class);
+                        if (checkData.getExpireTime() != null && checkData.getExpireTime().isAfter(LocalDateTime.now())) {
+                            return;
+                        }
+                    }
                     R newR = dbForBack.apply(id);
                     this.setLogicRedis(newR, key, ttl, timeUnit);
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    log.error("缓存重建失败", e);
                 } finally {
                     unLock(lockKey);
                 }

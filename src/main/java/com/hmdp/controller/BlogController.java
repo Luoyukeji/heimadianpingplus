@@ -53,8 +53,10 @@ public class BlogController {
     }
 
     @GetMapping("/hot")
-    public Result queryHotBlog(@RequestParam(value = "current", defaultValue = "1") Integer current) {
-        return blogService.queryHotBlog(current);
+    public Result queryHotBlog(/*@RequestParam(value = "current", defaultValue = "1") Integer current,
+            @RequestParam(value = "size", defaultValue = "10") Integer size*/) {
+        // return blogService.queryHotBlog(current, size);
+        return blogService.queryHotBlogAll(); // 新增方法，一次性返回所有blog
     }
 
     @GetMapping("/{id}")

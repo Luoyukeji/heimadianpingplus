@@ -14,7 +14,7 @@ import com.hmdp.entity.Blog;
  */
 public interface IBlogService extends IService<Blog> {
 
-    Result queryHotBlog(Integer current);
+    Result queryHotBlog(Integer current, Integer size);
 
     Result queryBlogById(Long id);
 
@@ -27,4 +27,6 @@ public interface IBlogService extends IService<Blog> {
     Result queryBlogOfFollow(Long max, Integer offset);
 
     Result queryBlogOfFollow2(Long max, Integer offset);
+
+    Result queryHotBlogAll();
 }

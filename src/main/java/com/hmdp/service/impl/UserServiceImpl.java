@@ -9,7 +9,9 @@ import com.hmdp.dto.LoginFormDTO;
 import com.hmdp.dto.Result;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
+import com.hmdp.entity.UserInfo;
 import com.hmdp.mapper.UserMapper;
+import com.hmdp.service.IUserInfoService;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.RegexUtils;
 import com.hmdp.utils.UserHolder;
@@ -44,6 +46,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private IUserInfoService userInfoService;
 
     @Override
     public Result sendCode(String phone, HttpSession session) {
@@ -226,6 +231,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         user.setNickName(USER_NICK_NAME_PREFIX + RandomUtil.randomString(10));
         // 2.保存用户
         save(user);
+        // 新增代码：创建用户详情
+        UserInfo userInfo = new UserInfo();
+        userInfo.setUserId(user.getId());
+        userInfo.setFans(0);
+        userInfo.setFollowee(0);
+        userInfoService.save(userInfo);
         return user;
     }
 }

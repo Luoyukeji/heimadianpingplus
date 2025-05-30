@@ -34,6 +34,7 @@ public class UploadController {
             image.transferTo(dest);
             // 返回结果
             log.debug("文件上传成功，{}", fileName);
+            // 返回相对路径，不包含 /imgs 前缀
             return Result.ok(fileName);
         } catch (IOException e) {
             throw new RuntimeException("文件上传失败", e);
@@ -59,11 +60,12 @@ public class UploadController {
         int d1 = hash & 0xF;
         int d2 = (hash >> 4) & 0xF;
         // 判断目录是否存在
-        File dir = new File(SystemConstants.IMAGE_UPLOAD_DIR, StrUtil.format("/blogs/{}/{}", d1, d2));
+        String dirPath = StrUtil.format("blogs/{}/{}", d1, d2);
+        File dir = new File(SystemConstants.IMAGE_UPLOAD_DIR, dirPath);
         if (!dir.exists()) {
             dir.mkdirs();
         }
         // 生成文件名
-        return StrUtil.format("/blogs/{}/{}/{}.{}", d1, d2, name, suffix);
+        return StrUtil.format("blogs/{}/{}/{}.{}", d1, d2, name, suffix);
     }
 }

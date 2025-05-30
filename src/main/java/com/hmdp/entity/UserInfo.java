@@ -29,8 +29,9 @@ public class UserInfo implements Serializable {
 
     /**
      * 主键，用户id
+     * 新增代码：由IdType.AUTO改为IdType.INPUT，修正主键为手动赋值，避免插入报错
      */
-    @TableId(value = "user_id", type = IdType.AUTO)
+    @TableId(value = "user_id", type = IdType.INPUT) // 新增代码：修正主键为手动赋值
     private Long userId;
 
     /**

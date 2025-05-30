@@ -20,10 +20,12 @@ import com.hmdp.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,11 +54,11 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
     private IFollowService followService;
 
     @Override
-    public Result queryHotBlog(Integer current) {
+    public Result queryHotBlog(Integer current, Integer size) {
         // 根据用户查询
         Page<Blog> page = query()
                 .orderByDesc("liked")
-                .page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
+                .page(new Page<>(current, size));
         // 获取当前页数据
         List<Blog> records = page.getRecords();
         // 查询用户
@@ -64,7 +66,13 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
             this.queryBlogUser(blog);
             this.isBlogLiked(blog);
         });
-        return Result.ok(records);
+        // 返回结果
+        return Result.ok(new HashMap<String, Object>() {{
+            put("records", records);
+            put("total", page.getTotal());
+            put("current", page.getCurrent());
+            put("pages", page.getPages());
+        }});
     }
 
     @Override
@@ -144,10 +152,13 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
     }
 
     @Override
+    @Transactional
     public Result saveBlog(Blog blog) {
         // 1.获取登录用户
         UserDTO user = UserHolder.getUser();
         blog.setUserId(user.getId());
+        // 设置默认商铺ID为1
+        // blog.setShopId(1L); // 注释掉这行，让前端传来的shopId生效
         // 2.保存探店笔记
         boolean isSuccess = save(blog);
         if(!isSuccess){
@@ -263,9 +274,31 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         return Result.ok(scrollResult);
     }
 
+    @Override
+    public Result queryHotBlogAll() {
+        List<Blog> records = query().orderByDesc("liked").list();
+        records.forEach(blog -> {
+            this.queryBlogUser(blog);
+            this.isBlogLiked(blog);
+        });
+        return Result.ok(records);
+    }
+
     private void queryBlogUser(Blog blog) {
         Long userId = blog.getUserId();
+        if (userId == null) {
+            // 新增代码：未登录或无用户信息，显示为游客
+            blog.setName("游客");
+            blog.setIcon(null);
+            return;
+        }
         User user = userService.getById(userId);
+        if (user == null) {
+            // 新增代码：防御性处理，避免user为null时报空指针
+            blog.setName("未知用户");
+            blog.setIcon(null);
+            return;
+        }
         blog.setName(user.getNickName());
         blog.setIcon(user.getIcon());
     }

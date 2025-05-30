@@ -35,4 +35,9 @@ public class FollowController {
     public Result followCommons(@PathVariable("id") Long id){
         return followService.followCommons(id);
     }
+
+    @GetMapping("/list")
+    public Result queryFollowees(@RequestParam(value = "current", defaultValue = "1") Integer current) {
+        return followService.queryFollowees(current);
+    }
 }
