@@ -27,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static com.hmdp.utils.RedisConstants.*;
@@ -89,6 +90,62 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         // 返回ok
         return Result.ok();
     }
+
+
+    @Override
+    public Result sendCode3(String phone, HttpSession session) {
+        // 1.效验手机号是否符合
+        if (RegexUtils.isPhoneInvalid(phone)) {
+            return Result.fail("手机号格式错误");
+        }
+
+        //2. 符合 ，生成6位随机数验证码
+        String code = RandomUtil.randomNumbers(6);
+
+
+        //3. 将验证码保存在redis当中
+        stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY + phone, code, LOGIN_CODE_TTL, TimeUnit.MINUTES);
+        // 4. 发送验证码
+        log.debug("code为：{}", code);
+        //5. 返回ok
+
+        return Result.ok();
+    }
+
+    @Override
+    public Result login3(LoginFormDTO loginForm, HttpSession session) {
+        return null;
+    }
+
+//    @Override
+//    public Result login3(LoginFormDTO loginForm, HttpSession session) {
+//        // 1. 效验手机号
+//        String phone = loginForm.getPhone();
+//
+//        if(RegexUtils.isPhoneInvalid(phone)){
+//            return Result.fail("手机号错啦！！！");
+//        }
+//        // 2.校验验证码
+//        Object cacheCode = session.getAttribute("code");
+//        String code = loginForm.getCode();
+//
+//        if(cacheCode == null || !cacheCode.toString().equals(code)) {
+//            // 3. 不一致，报错
+//            return Result.fail("验证码出错啦！！！");
+//        }
+//        //4. 一致，根据手机号查询该用户
+//        // 用的mybatis plus  下面这条语句就相当于 select * from tb_user where phone = 112345...
+//        User user = query().eq("phone", phone).one();
+//        // 5. 判断用户是否存在
+//        if (user == null) {
+//            // 6. 不存在，创建用户
+//             user = createUserWithPhone(phone);
+//        }
+//        //7. 保存用户session
+//        session.setAttribute("user",user);
+//
+//        return Result.ok();
+//    }
 
     @Override
     public Result login(LoginFormDTO loginForm, HttpSession session) {
@@ -214,7 +271,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             if ((num & 1) == 0) {
                 // 如果为0，说明未签到，结束
                 break;
-            }else {
+            } else {
                 // 如果不为0，说明已签到，计数器+1
                 count++;
             }
@@ -223,6 +280,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         }
         return Result.ok(count);
     }
+
 
     private User createUserWithPhone(String phone) {
         // 1.创建用户
@@ -239,4 +297,5 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         userInfoService.save(userInfo);
         return user;
     }
+
 }

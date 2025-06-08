@@ -26,6 +26,7 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/upload/**",
                         "/blog/hot",
                         "/user/code",
+                        "/user/code1",
                         "/user/login"
                 ).order(1);
         // token刷新的拦截器

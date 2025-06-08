@@ -19,6 +19,7 @@ public interface IUserService extends IService<User> {
 
     Result sendCode(String phone, HttpSession session);
 
+    // 创建 发送验证码的方法
     Result sendCode2(String phone, HttpSession session);
 
     Result login(LoginFormDTO loginForm, HttpSession session);
@@ -29,4 +30,7 @@ public interface IUserService extends IService<User> {
 
     Result signCount();
 
+    Result sendCode3(String phone, HttpSession session);
+
+    Result login3(LoginFormDTO loginForm, HttpSession session);
 }

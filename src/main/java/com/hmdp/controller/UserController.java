@@ -9,6 +9,8 @@ import com.hmdp.entity.User;
 import com.hmdp.entity.UserInfo;
 import com.hmdp.service.IUserInfoService;
 import com.hmdp.service.IUserService;
+import com.hmdp.service.impl.UserServiceImpl;
+import com.hmdp.utils.RegexUtils;
 import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,12 +48,19 @@ public class UserController {
 
     /**
      * 发送手机验证码
+     * user/code
      */
     @PostMapping("code")
     public Result sendCode(@RequestParam("phone") @NotBlank(message = "手机号不能为空") String phone, HttpSession session) {
         // 发送短信验证码并保存验证码
         return userService.sendCode2(phone, session);
     }
+
+//    @PostMapping("code1")
+//    public Result sendCode(@RequestParam("phone") @NotBlank(message = "手机号不能为空") String phone,HttpSession session){
+//
+//        return userService.sendCode3(phone,session);
+//    }
 
     /**
      * 登录功能
@@ -70,21 +79,30 @@ public class UserController {
         return userService.login2(loginForm, session);
     }
 
+
     /**
      * 登出功能
      * @return 无
      */
     @PostMapping("/logout")
-    public Result logout(HttpServletRequest request){
-        // 新增代码：完善登出功能
-        String token = request.getHeader("authorization");
-        if (token != null && !token.isEmpty()) {
-            String key = RedisConstants.LOGIN_USER_KEY + token;
-            stringRedisTemplate.delete(key);
-        }
-        UserHolder.removeUser(); // 清理ThreadLocal
-        return Result.ok("退出登录成功");
+    /**
+ * 用户登出功能
+ * 通过删除Redis中的用户信息以及清理ThreadLocal中的用户信息来实现用户登出
+ *
+ * @param request HTTP请求对象，用于获取请求头中的token
+ * @return 返回一个Result对象，表示登出操作的结果
+ */
+public Result logout(HttpServletRequest request){
+    // 新增代码：完善登出功能
+    String token = request.getHeader("authorization");
+    if (token != null && !token.isEmpty()) {
+        String key = RedisConstants.LOGIN_USER_KEY + token;
+        stringRedisTemplate.delete(key);
     }
+    UserHolder.removeUser(); // 清理ThreadLocal
+    return Result.ok("退出登录成功");
+}
+
 
     @GetMapping("/me")
     public Result me(){

@@ -229,49 +229,59 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
 
     @Override
     public Result queryBlogOfFollow2(Long max, Integer offset) {
-
-        // 实现关注推送页面的分页查询
-        // 获取当前用户ID
-        Long userId = UserHolder.getUser().getId();
-        // 根据用户查询推送文章
-        String key = FEED_KEY + userId;
-        Set<ZSetOperations.TypedTuple<String>> typedTuples = stringRedisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, 0, max, offset, 2);
-        if (CollectionUtil.isEmpty(typedTuples)) {
-            return Result.ok();
+        // 1.获取当前用户
+        UserDTO user = UserHolder.getUser();
+        if (user == null) {
+            return Result.fail("请先登录");
         }
-        List<Long> blogIds = new ArrayList<>(typedTuples.size());
+        Long userId = user.getId();
+        
+        // 2.查询用户是否有关注的人
+        String followKey = "follows:" + userId;
+        Long followCount = stringRedisTemplate.opsForSet().size(followKey);
+        if (followCount == null || followCount == 0) {
+            return Result.ok(Collections.emptyList());
+        }
+
+        // 3.查询收件箱
+        String key = FEED_KEY + userId;
+        Set<ZSetOperations.TypedTuple<String>> typedTuples = stringRedisTemplate.opsForZSet()
+                .reverseRangeByScoreWithScores(key, 0, max, offset, 2);
+        if (typedTuples == null || typedTuples.isEmpty()) {
+            return Result.ok(Collections.emptyList());
+        }
+
+        // 4.解析数据：blogId、minTime（时间戳）、offset
+        List<Long> ids = new ArrayList<>(typedTuples.size());
+        long minTime = 0;
         int os = 1;
-        long minTime = System.currentTimeMillis();
-        for (ZSetOperations.TypedTuple<String> typedTuple : typedTuples) {
-            // 文章笔记Id
-            String value = typedTuple.getValue();
-            blogIds.add(Long.valueOf(value));
-            long time = typedTuple.getScore().longValue();
-            // scope重复 将offset值+1
-            if (minTime == time) {
+        for (ZSetOperations.TypedTuple<String> tuple : typedTuples) {
+            ids.add(Long.valueOf(tuple.getValue()));
+            long time = tuple.getScore().longValue();
+            if(time == minTime){
                 os++;
-            } else {
-                // 上次查询记录scope
+            }else{
                 minTime = time;
                 os = 1;
             }
         }
 
-        String idStr = StrUtil.join(",", blogIds);
-        List<Blog> blogList = query().in("id", blogIds).last("ORDER BY FIELD(id," + idStr + ")").list();
-        for (Blog blog : blogList) {
-            // 5.1.查询blog有关的用户
+        // 5.根据id查询blog
+        String idStr = StrUtil.join(",", ids);
+        List<Blog> blogs = query().in("id", ids).last("ORDER BY FIELD(id," + idStr + ")").list();
+
+        for (Blog blog : blogs) {
             queryBlogUser(blog);
-            // 5.2.查询blog是否被点赞
             isBlogLiked(blog);
         }
 
-        ScrollResult scrollResult = new ScrollResult();
-        scrollResult.setList(blogList);
-        scrollResult.setMinTime(minTime);
-        scrollResult.setOffset(os);
+        // 6.封装并返回
+        ScrollResult r = new ScrollResult();
+        r.setList(blogs);
+        r.setOffset(os);
+        r.setMinTime(minTime);
 
-        return Result.ok(scrollResult);
+        return Result.ok(r);
     }
 
     @Override

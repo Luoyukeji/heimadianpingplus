@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.hmdp.utils.RedisConstants.BLOG_LIKED_KEY;
+
 @Slf4j
 @Service
 public class BlogServiceImpl2 extends ServiceImpl<BlogMapper, Blog> implements IBlogService2 {
@@ -54,7 +56,7 @@ public class BlogServiceImpl2 extends ServiceImpl<BlogMapper, Blog> implements I
             return Result.fail("请先登录");
         }
         Long userId = user.getId();
-        String key = "blog:likes:" + id;
+        String key = BLOG_LIKED_KEY + id;
         Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());
         // 点过赞，取消赞，将点赞数减一
         if (score != null) {
@@ -71,7 +73,7 @@ public class BlogServiceImpl2 extends ServiceImpl<BlogMapper, Blog> implements I
 
     @Override
     public Result queryBlogLikes(Long id) {
-        String key = "blog:likes:" + id;
+        String key = BLOG_LIKED_KEY + id;
         Set<String> top5 = stringRedisTemplate.opsForZSet().range(key, 0, 5);
         if (CollectionUtil.isEmpty(top5)) {
             return Result.ok(Collections.emptyList());
@@ -92,7 +94,7 @@ public class BlogServiceImpl2 extends ServiceImpl<BlogMapper, Blog> implements I
     }
 
     private void setIsLike(Blog blog, Long userId) {
-        String key = "blog:likes:" + blog.getId();
+        String key = BLOG_LIKED_KEY + blog.getId();
         Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());
         blog.setIsLike(Boolean.TRUE.equals(score != null));
     }
